@@ -1,0 +1,10 @@
+/node_modules
+/.next/
+/out/
+/build
+.env*
+# the template with no real values is meant to be shared
+!.env.example
+*.tsbuildinfo
+# the live database (tasks, attendance, logins) - never commit
+/data/
