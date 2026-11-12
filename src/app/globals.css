@@ -197,7 +197,7 @@ textarea { min-height: 84px; resize: vertical; }
 .loader-full { position: fixed; inset: 0; z-index: 50; min-height: 0; background: var(--paper); }
 .loader-y { width: 92px; height: 92px; overflow: visible; }
 .loader-full .loader-y { width: 110px; height: 110px; }
-.loader-logo { height: 38px; width: auto; animation: loader-fade 0.6s ease 0.3s both; }
+.loader-logo { height: 38px; width: auto; animation: loader-fade 0.35s ease both; }
 .loader-y path { fill: none; stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; }
 .ly { stroke: var(--ink); stroke-dasharray: 1; animation: loader-draw 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
 .la { stroke: var(--yellow); stroke-dasharray: 1; animation: loader-draw 1.5s cubic-bezier(0.65, 0, 0.35, 1) 0.15s infinite; }
@@ -214,10 +214,29 @@ textarea { min-height: 84px; resize: vertical; }
   100% { opacity: 0; }
 }
 @keyframes loader-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---------- first-open intro: the Y draws once, then the full logo, then it fades away ---------- */
+.splash { position: fixed; inset: 0; z-index: 100; background: var(--paper); transition: opacity 0.45s ease, visibility 0.45s; }
+.splash-out { opacity: 0; visibility: hidden; pointer-events: none; }
+html[data-intro="done"] .splash { display: none; }
+.splash .loader-full { z-index: 0; }
+.splash .ly, .splash .la { animation: splash-draw 0.8s cubic-bezier(0.65, 0, 0.35, 1) both; }
+.splash .la { animation-delay: 0.15s; }
+.splash .lh { animation: splash-pop 0.4s ease 0.55s both; }
+.splash .loader-logo { animation: loader-fade 0.5s ease 0.7s both; }
+@keyframes splash-draw {
+  0% { stroke-dashoffset: 1; opacity: 0; }
+  5% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+@keyframes splash-pop {
+  from { opacity: 0; transform: scale(0.6) translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .ly, .la { animation: none; stroke-dashoffset: 0; }
-  .lh { animation: none; }
-  .loader-logo { animation: none; }
+  .ly, .la, .splash .ly, .splash .la { animation: none; stroke-dashoffset: 0; }
+  .lh, .splash .lh { animation: none; }
+  .loader-logo, .splash .loader-logo { animation: none; }
 }
 
 @media (max-width: 960px) {
