@@ -34,6 +34,32 @@ Set a job once on the Repeating page. Desk creates the task on every due day, fr
 
 All dates and times use India time.
 
+## Notifications
+
+Everyone has a **Notifications** bell in the sidebar with a count of unread items. Clicking a notification opens the task. People are told when:
+
+- a task is given to them, or handed over to them (repeating tasks arrive as one combined message each morning)
+- their work is sent back, with the note
+- someone submits work for review (the owner and leads are told)
+- they have work due today or overdue (a reminder every morning at 9:30 AM India time), and the owner and leads get one team summary
+
+Notifications older than 60 days are cleared automatically.
+
+### Email (optional)
+
+Each notification can also be emailed. Each person can switch email off on their **Account** page. Without the settings below, Desk simply skips email and the bell still works.
+
+1. Sign up at https://resend.com (the free plan is enough).
+2. Add a sending domain. Use a subdomain such as `mail.yenoh.in`, so your normal `yenoh.in` email is not touched. Resend shows DNS records to add.
+3. In Hostinger, open **Domains → yenoh.in → DNS records** and add the records exactly as Resend shows them. Then click **Verify** in Resend.
+4. In Resend, create an **API key** with sending access.
+5. In the Vercel project, add these settings (see `.env.example`), then redeploy:
+   - `RESEND_API_KEY`: the key from step 4
+   - `MAIL_FROM`: `Yenoh Desk <desk@mail.yenoh.in>`
+   - `APP_URL`: `https://desk.yenoh.in`
+
+If an email fails to send (for example the email service is down), the task and the bell notification are still saved, and the problem is written to the Vercel logs.
+
 ## Put it online at desk.yenoh.in
 
 Your website is on Vercel, the code is on GitHub, and the domain is on Hostinger. Desk follows the same pattern, as its own project. You need to do the account steps yourself; each takes a few minutes.

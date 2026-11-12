@@ -15,6 +15,7 @@ export default async function AppLayout({ children }) {
       : []),
     ...(user.role === "owner" ? [["/services", "Services"]] : []),
     ["/my-day", "My Day"],
+    ["/notifications", "Notifications"],
     ["/account", "Account"],
   ];
 

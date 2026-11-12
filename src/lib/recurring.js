@@ -2,6 +2,7 @@
 // and once a day by the scheduled job (see vercel.json). It runs as one all-or-nothing
 // database step, so two callers at once can never create the same task twice.
 import { get, transaction } from "./db";
+import { notify } from "./notify";
 import { today, addDays, weekday } from "./time";
 
 export const FREQ = { daily: "Every day (Mon to Sat)", weekly: "Every week", monthly: "Every month" };
@@ -29,7 +30,8 @@ export async function ensureRecurring() {
   const stale = await get("SELECT COUNT(*) AS n FROM recurring WHERE active = 1 AND last_run < ?", t);
   if (!stale.n) return 0;
 
-  return transaction(async (tx) => {
+  const perPerson = new Map(); // how many new tasks each person got, for their notification
+  const total = await transaction(async (tx) => {
     let created = 0;
     const rules = await tx.all("SELECT * FROM recurring WHERE active = 1 AND last_run < ?", t);
     for (const rule of rules) {
@@ -56,10 +58,21 @@ export async function ensureRecurring() {
             rule.title, rule.details, rule.client_id, rule.service_id, rule.assignee_id, rule.created_by, d, checklist, t, rule.id
           );
           created++;
+          perPerson.set(rule.assignee_id, (perPerson.get(rule.assignee_id) ?? 0) + 1);
         }
       }
       await tx.run("UPDATE recurring SET last_run = ? WHERE id = ?", t, rule.id);
     }
     return created;
   });
+  // After the tasks are safely saved, tell each person once (not once per task).
+  for (const [userId, n] of perPerson) {
+    await notify(userId, {
+      kind: "assigned",
+      title: n === 1 ? "1 repeating task added for you" : `${n} repeating tasks added for you`,
+      body: "Your repeating tasks for today are ready.",
+      link: "/my-day",
+    });
+  }
+  return total;
 }

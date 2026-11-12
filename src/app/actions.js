@@ -7,8 +7,9 @@ import {
   createSession, destroySession, hashPassword, verifyPassword,
   requireUser, requireManager, requireOwner,
 } from "@/lib/auth";
-import { today, nowTime, isDate } from "@/lib/time";
+import { today, nowTime, isDate, fmtDate } from "@/lib/time";
 import { parseList } from "@/lib/queries";
+import { notify, managerIds } from "@/lib/notify";
 
 const ROLES = ["member", "lead"];
 const TYPES = ["Full-time", "Part-time", "Intern"];
@@ -94,6 +95,30 @@ export async function changePassword(fd) {
   redirect("/account?ok=1");
 }
 
+/* ---------------- Notifications and email preference ---------------- */
+
+export async function setEmailNotify(fd) {
+  const user = await requireUser();
+  await run("UPDATE users SET email_notify = ? WHERE id = ?", fd.get("email_notify") === "on" ? 1 : 0, user.id);
+  refresh();
+  redirect("/account?ok=email");
+}
+
+export async function markAllRead() {
+  const user = await requireUser();
+  await run("UPDATE notifications SET read = 1 WHERE user_id = ? AND read = 0", user.id);
+  refresh();
+}
+
+// Clicking a notification marks it read and goes to the task. Only the owner of a notification can open it.
+export async function openNotification(fd) {
+  const user = await requireUser();
+  const n = await get("SELECT id, link FROM notifications WHERE id = ? AND user_id = ?", int(fd, "id"), user.id);
+  if (n) await run("UPDATE notifications SET read = 1 WHERE id = ?", n.id);
+  refresh();
+  redirect(n && n.link.startsWith("/") ? n.link : "/notifications");
+}
+
 /* ---------------- Attendance ---------------- */
 
 export async function checkIn() {
@@ -141,17 +166,25 @@ export async function createTask(fd) {
   const user = await requireManager();
   const title = str(fd, "title", 160);
   const due = str(fd, "due", 10);
-  const client = await get("SELECT id FROM clients WHERE id = ? AND active = 1", int(fd, "client_id"));
+  const client = await get("SELECT id, name FROM clients WHERE id = ? AND active = 1", int(fd, "client_id"));
   const service = await get("SELECT id, checklist FROM services WHERE id = ?", int(fd, "service_id"));
   const assignee = await get("SELECT id FROM users WHERE id = ? AND active = 1", int(fd, "assignee_id"));
   if (!title || !client || !service || !assignee || !isDate(due)) redirect("/tasks/new?error=1");
   const checklist = parseList(service.checklist).map((t) => ({ t, done: false }));
-  await run(
+  const created = await run(
     `INSERT INTO tasks(title, details, client_id, service_id, assignee_id, created_by, due, source, checklist, created_at)
      VALUES(?,?,?,?,?,?,?,?,?,?)`,
     title, str(fd, "details", 1000), client.id, service.id, assignee.id, user.id, due,
     pick(str(fd, "source", 20), SOURCES), JSON.stringify(checklist), today()
   );
+  if (assignee.id !== user.id) {
+    await notify(assignee.id, {
+      kind: "assigned",
+      title: `New task: ${title}`,
+      body: `${user.name} gave you a task for ${client.name}. It is due ${fmtDate(due)}.`,
+      link: "/my-day",
+    });
+  }
   refresh();
   redirect("/tasks");
 }
@@ -186,6 +219,13 @@ export async function submitTask(fd) {
   const task = await ownTask(fd);
   if (task && task.status === "doing" && parseList(task.checklist).every((c) => c.done)) {
     await run("UPDATE tasks SET status = 'review', note = '', proof = ? WHERE id = ?", str(fd, "proof", 500), task.id);
+    const who = await get("SELECT name FROM users WHERE id = ?", task.assignee_id);
+    await notify(await managerIds(task.assignee_id), {
+      kind: "review",
+      title: `Ready for review: ${task.title}`,
+      body: `${who?.name ?? "A team member"} submitted this work for review.`,
+      link: `/tasks/${task.id}`,
+    });
   }
   refresh();
 }
@@ -199,26 +239,42 @@ export async function approveTask(fd) {
 export async function sendBackTask(fd) {
   await requireManager();
   const note = str(fd, "note", 500) || "Sent back after review. Please fix and submit again.";
-  const task = await get("SELECT id, checklist FROM tasks WHERE id = ? AND status = 'review'", int(fd, "id"));
+  const task = await get("SELECT id, checklist, title, assignee_id FROM tasks WHERE id = ? AND status = 'review'", int(fd, "id"));
   if (task) {
     // Untick the checklist so the work is checked again before it is resubmitted.
     const list = parseList(task.checklist).map((c) => ({ ...c, done: false }));
     await run("UPDATE tasks SET status = 'doing', note = ?, checklist = ? WHERE id = ?", note, JSON.stringify(list), task.id);
+    await notify(task.assignee_id, {
+      kind: "sentback",
+      title: `Sent back: ${task.title}`,
+      body: `Please fix it and submit again. Note: ${note}`,
+      link: "/my-day",
+    });
   }
   refresh();
 }
 
 export async function updateTask(fd) {
-  await requireManager();
+  const user = await requireManager();
   const id = int(fd, "id");
   const title = str(fd, "title", 160);
   const due = str(fd, "due", 10);
   const assignee = await get("SELECT id FROM users WHERE id = ? AND active = 1", int(fd, "assignee_id"));
   if (!id || !title || !assignee || !isDate(due)) redirect(`/tasks/${id}?error=1`);
+  const before = await get("SELECT assignee_id FROM tasks WHERE id = ?", id);
   await run(
     "UPDATE tasks SET title = ?, details = ?, assignee_id = ?, due = ? WHERE id = ?",
     title, str(fd, "details", 1000), assignee.id, due, id
   );
+  // Handed to someone new: tell them.
+  if (before && before.assignee_id !== assignee.id && assignee.id !== user.id) {
+    await notify(assignee.id, {
+      kind: "assigned",
+      title: `New task: ${title}`,
+      body: `${user.name} gave you this task. It is due ${fmtDate(due)}.`,
+      link: "/my-day",
+    });
+  }
   refresh();
   redirect(`/tasks/${id}?saved=1`);
 }

@@ -191,6 +191,21 @@ textarea { min-height: 84px; resize: vertical; }
 .auth .brand img { height: 44px; }
 .auth .card { box-shadow: 6px 7px 0 var(--ink); padding: 28px; }
 
+/* ---------- notifications ---------- */
+.nav a { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.badge { min-width: 22px; height: 22px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--ink); border-radius: 999px; background: var(--red); color: #fff; font-family: var(--font-body); font-size: 11.5px; font-weight: 700; line-height: 1; }
+.notif-row { margin: 0; border-top: 1.5px dashed var(--line-color); }
+.notif-row:first-of-type { border-top: 0; }
+.notif { width: 100%; display: flex; gap: 12px; align-items: flex-start; text-align: left; padding: 14px 18px; background: transparent; border: 0; cursor: pointer; }
+.notif:hover { background: var(--ink-10); }
+.notif:focus-visible { outline: 3px solid var(--yellow); outline-offset: -3px; }
+.notif.unread { background: var(--yellow-soft); }
+.notif-dot { flex-shrink: 0; width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; border: 2px solid var(--ink-45); }
+.notif.unread .notif-dot { background: var(--red); border-color: var(--red); }
+.notif-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.notif-title { font-weight: 700; overflow-wrap: anywhere; }
+.notif-body { color: var(--ink-70); white-space: pre-line; overflow-wrap: anywhere; }
+
 /* ---------- loading screen: the Y draws itself, like the intro on yenoh.in ---------- */
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .loader { min-height: 55vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }

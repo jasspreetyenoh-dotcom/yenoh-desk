@@ -40,6 +40,11 @@ CREATE TABLE IF NOT EXISTS recurring(
   active INTEGER NOT NULL DEFAULT 1, last_run TEXT NOT NULL, created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS login_attempts(
   email TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, last INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS notifications(
+  id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), kind TEXT NOT NULL,
+  title TEXT NOT NULL, body TEXT NOT NULL DEFAULT '', link TEXT NOT NULL DEFAULT '',
+  day TEXT NOT NULL, created_at INTEGER NOT NULL, read INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX IF NOT EXISTS notifications_user ON notifications(user_id, read, id);
 `;
 
 // Yenoh's services, each with the checklist a team member must finish before submitting.
@@ -76,9 +81,13 @@ async function prepare(client) {
       (SELECT COUNT(*) FROM services) AS s,
       (SELECT COUNT(*) FROM pragma_table_info('tasks') WHERE name = 'recurring_id') AS r,
       (SELECT COUNT(*) FROM sqlite_master WHERE name = 'login_attempts') AS l,
-      (SELECT COUNT(*) FROM sqlite_master WHERE name = 'recurring') AS c`);
+      (SELECT COUNT(*) FROM sqlite_master WHERE name = 'recurring') AS c,
+      (SELECT COUNT(*) FROM sqlite_master WHERE name = 'notifications') AS n,
+      (SELECT COUNT(*) FROM pragma_table_info('users') WHERE name = 'email_notify') AS e`);
     const x = rows[0];
-    if (Number(x.s) > 0 && Number(x.r) === 1 && Number(x.l) === 1 && Number(x.c) === 1) return client;
+    if (Number(x.s) > 0 && Number(x.r) === 1 && Number(x.l) === 1 && Number(x.c) === 1 && Number(x.n) === 1 && Number(x.e) === 1) {
+      return client;
+    }
   } catch {
     // tables do not exist yet: first run, set everything up below
   }
@@ -86,6 +95,10 @@ async function prepare(client) {
   // Additive upgrade for databases made before repeating tasks existed.
   const cols = (await client.execute("PRAGMA table_info(tasks)")).rows.map((r) => r.name);
   if (!cols.includes("recurring_id")) await client.execute("ALTER TABLE tasks ADD COLUMN recurring_id INTEGER");
+  const userCols = (await client.execute("PRAGMA table_info(users)")).rows.map((r) => r.name);
+  if (!userCols.includes("email_notify")) {
+    await client.execute("ALTER TABLE users ADD COLUMN email_notify INTEGER NOT NULL DEFAULT 1");
+  }
   const { rows } = await client.execute("SELECT COUNT(*) AS n FROM services");
   if (Number(rows[0].n) === 0) {
     await client.batch(
