@@ -11,15 +11,17 @@ export const metadata = { title: "Dashboard · Yenoh Desk" };
 export default async function Dashboard() {
   await requireManager();
   const t = today();
-  const overdue = await all(`${TASK_SELECT} WHERE t.status != 'done' AND t.due < ? ORDER BY t.due`, t);
-  const dueToday = await all(`${TASK_SELECT} WHERE t.status != 'done' AND t.due = ? ORDER BY t.id`, t);
-  const review = await all(`${TASK_SELECT} WHERE t.status = 'review' ORDER BY t.due`);
-  const team = await all(
+  // The four questions below are asked together, not one after another.
+  const pOverdue = all(`${TASK_SELECT} WHERE t.status != 'done' AND t.due < ? ORDER BY t.due`, t);
+  const pDue = all(`${TASK_SELECT} WHERE t.status != 'done' AND t.due = ? ORDER BY t.id`, t);
+  const pReview = all(`${TASK_SELECT} WHERE t.status = 'review' ORDER BY t.due`);
+  const pTeam = all(
     `SELECT u.id, u.name, u.job_title, u.emp_type, u.work_mode, a.status, a.in_time, a.out_time
      FROM users u LEFT JOIN attendance a ON a.user_id = u.id AND a.date = ?
      WHERE u.active = 1 AND u.role != 'owner' ORDER BY u.name`,
     t
   );
+  const [overdue, dueToday, review, team] = await Promise.all([pOverdue, pDue, pReview, pTeam]);
   const notIn = team.filter((m) => m.status !== "present").length;
 
   return (

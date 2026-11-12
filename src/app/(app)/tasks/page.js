@@ -20,8 +20,11 @@ export default async function TasksPage({ searchParams }) {
   if (client) { where.push("t.client_id = ?"); params.push(client); }
   if (person) { where.push("t.assignee_id = ?"); params.push(person); }
 
-  const tasks = await all(`${TASK_SELECT} WHERE ${where.join(" AND ")} ORDER BY t.due, t.id`, ...params);
-  const [clients, users] = await Promise.all([activeClients(), activeUsers()]);
+  const [tasks, clients, users] = await Promise.all([
+    all(`${TASK_SELECT} WHERE ${where.join(" AND ")} ORDER BY t.due, t.id`, ...params),
+    activeClients(),
+    activeUsers(),
+  ]);
 
   return (
     <>

@@ -21,8 +21,8 @@ export default async function SetupPage({ searchParams }) {
     <div className="center">
       <div className="auth">
         <div className="brand">
-          <img src="/logo.png" alt="" />
-          <span>Yenoh <span className="mark">Desk</span></span>
+          <img src="/yenoh-logo.png" alt="Yenoh" />
+          <span className="mark">Desk</span>
         </div>
         <div className="card">
           <h2>Create the owner account</h2>

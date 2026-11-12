@@ -10,9 +10,12 @@ export const metadata = { title: "My Day · Yenoh Desk" };
 export default async function MyDay() {
   const user = await requireUser();
   const t = today();
-  const att = await get("SELECT * FROM attendance WHERE user_id = ? AND date = ?", user.id, t);
-  const tasks = await all(`${TASK_SELECT} WHERE t.assignee_id = ? AND t.status != 'done' ORDER BY t.due, t.id`, user.id);
-  const { n: doneToday } = await get("SELECT COUNT(*) n FROM tasks WHERE assignee_id = ? AND status = 'done' AND done_at = ?", user.id, t);
+  const [att, tasks, done] = await Promise.all([
+    get("SELECT * FROM attendance WHERE user_id = ? AND date = ?", user.id, t),
+    all(`${TASK_SELECT} WHERE t.assignee_id = ? AND t.status != 'done' ORDER BY t.due, t.id`, user.id),
+    get("SELECT COUNT(*) n FROM tasks WHERE assignee_id = ? AND status = 'done' AND done_at = ?", user.id, t),
+  ]);
+  const doneToday = done.n;
 
   return (
     <>

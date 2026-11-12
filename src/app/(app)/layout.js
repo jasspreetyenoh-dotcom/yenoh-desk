@@ -22,8 +22,8 @@ export default async function AppLayout({ children }) {
     <div className="shell">
       <aside className="side">
         <Link href="/" className="brand">
-          <img src="/logo.png" alt="" />
-          <span>Yenoh <span className="mark">Desk</span></span>
+          <img src="/yenoh-logo.png" alt="Yenoh" />
+          <span className="mark">Desk</span>
         </Link>
         <NavLinks links={links} />
         <div className="who">

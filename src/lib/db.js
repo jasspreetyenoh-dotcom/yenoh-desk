@@ -69,6 +69,19 @@ function connect() {
 }
 
 async function prepare(client) {
+  // Fast path: one question tells us everything is already set up, which saves
+  // several round trips to the database every time the app starts up.
+  try {
+    const { rows } = await client.execute(`SELECT
+      (SELECT COUNT(*) FROM services) AS s,
+      (SELECT COUNT(*) FROM pragma_table_info('tasks') WHERE name = 'recurring_id') AS r,
+      (SELECT COUNT(*) FROM sqlite_master WHERE name = 'login_attempts') AS l,
+      (SELECT COUNT(*) FROM sqlite_master WHERE name = 'recurring') AS c`);
+    const x = rows[0];
+    if (Number(x.s) > 0 && Number(x.r) === 1 && Number(x.l) === 1 && Number(x.c) === 1) return client;
+  } catch {
+    // tables do not exist yet: first run, set everything up below
+  }
   await client.executeMultiple(SCHEMA);
   // Additive upgrade for databases made before repeating tasks existed.
   const cols = (await client.execute("PRAGMA table_info(tasks)")).rows.map((r) => r.name);

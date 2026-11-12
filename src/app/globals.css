@@ -1,4 +1,4 @@
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&display=swap');
+/* The Satoshi font is loaded from the page head (see layout.js), which is faster than an @import here. */
 
 /* Same paper, ink and mustard-yellow theme as yenoh.in */
 :root {
@@ -190,6 +190,35 @@ textarea { min-height: 84px; resize: vertical; }
 .auth .brand { justify-content: center; margin-bottom: 22px; font-size: 26px; }
 .auth .brand img { height: 44px; }
 .auth .card { box-shadow: 6px 7px 0 var(--ink); padding: 28px; }
+
+/* ---------- loading screen: the Y draws itself, like the intro on yenoh.in ---------- */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.loader { min-height: 55vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+.loader-full { position: fixed; inset: 0; z-index: 50; min-height: 0; background: var(--paper); }
+.loader-y { width: 92px; height: 92px; overflow: visible; }
+.loader-full .loader-y { width: 110px; height: 110px; }
+.loader-logo { height: 38px; width: auto; animation: loader-fade 0.6s ease 0.3s both; }
+.loader-y path { fill: none; stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; }
+.ly { stroke: var(--ink); stroke-dasharray: 1; animation: loader-draw 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+.la { stroke: var(--yellow); stroke-dasharray: 1; animation: loader-draw 1.5s cubic-bezier(0.65, 0, 0.35, 1) 0.15s infinite; }
+.lh { stroke: var(--yellow); transform-box: fill-box; transform-origin: center; animation: loader-pop 1.5s ease 0.15s infinite; }
+@keyframes loader-draw {
+  0% { stroke-dashoffset: 1; opacity: 0; }
+  4% { opacity: 1; }
+  50%, 85% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes loader-pop {
+  0%, 38% { opacity: 0; transform: scale(0.6) translateY(8px); }
+  55%, 85% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; }
+}
+@keyframes loader-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .ly, .la { animation: none; stroke-dashoffset: 0; }
+  .lh { animation: none; }
+  .loader-logo { animation: none; }
+}
 
 @media (max-width: 960px) {
   .shell { grid-template-columns: minmax(0, 1fr); }
